@@ -1,0 +1,2 @@
+NAME         STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS             VOLUMEATTRIBUTESCLASS   AGE   VOLUMEMODE
+oc-lab-pvc   Bound    pvc-d01bf19e-7cc7-4232-a17a-fd78d568e83d   1Gi        RWO            skills-network-learner   <unset>                 27m   Filesystem

@@ -1,0 +1,94 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"tekton.dev/v1beta1","kind":"Pipeline","metadata":{"annotations":{},"name":"ci-cd-final-project","namespace":"sn-labs-joshchongmah"},"spec":{"params":[{"default":"https://github.com/RyugaV3/ci-cd-final-project.git","name":"repo-url","type":"string"},{"default":"main","name":"revision","type":"string"},{"default":"ci-cd-final-project","name":"app-name","type":"string"},{"default":"image-registry.openshift-image-registry.svc:5000/sn-labs-joshchongmah/ci-cd-final-project:latest","name":"build-image","type":"string"}],"tasks":[{"name":"cleanup","taskRef":{"kind":"Task","name":"cleanup"},"workspaces":[{"name":"source","workspace":"output"}]},{"name":"git-clone","params":[{"name":"url","value":"$(params.repo-url)"},{"name":"revision","value":"$(params.revision)"}],"runAfter":["cleanup"],"taskRef":{"kind":"ClusterTask","name":"git-clone"},"workspaces":[{"name":"output","workspace":"output"}]},{"name":"flake8","runAfter":["git-clone"],"taskRef":{"kind":"Task","name":"flake8"},"workspaces":[{"name":"source","workspace":"output"}]},{"name":"nose","runAfter":["flake8"],"taskRef":{"kind":"Task","name":"nose"},"workspaces":[{"name":"source","workspace":"output"}]},{"name":"buildah","params":[{"name":"IMAGE","value":"$(params.build-image)"},{"name":"DOCKERFILE","value":"./Dockerfile"},{"name":"CONTEXT","value":"."}],"runAfter":["nose"],"taskRef":{"kind":"ClusterTask","name":"buildah"},"workspaces":[{"name":"source","workspace":"output"}]},{"name":"deploy","params":[{"name":"SCRIPT","value":"oc create deployment $(params.app-name) --image=$(params.build-image) --dry-run=client -o yaml | oc apply -f -\n"}],"runAfter":["buildah"],"taskRef":{"kind":"ClusterTask","name":"openshift-client"}}],"workspaces":[{"name":"output"}]}}
+  creationTimestamp: "2026-10-29T17:10:46Z"
+  generation: 1
+  name: ci-cd-final-project
+  namespace: sn-labs-joshchongmah
+  resourceVersion: "3108529928"
+  uid: 7817535a-2d58-419b-9b46-ef9b2894e6fd
+spec:
+  params:
+  - default: https://github.com/RyugaV3/ci-cd-final-project.git
+    name: repo-url
+    type: string
+  - default: main
+    name: revision
+    type: string
+  - default: ci-cd-final-project
+    name: app-name
+    type: string
+  - default: image-registry.openshift-image-registry.svc:5000/sn-labs-joshchongmah/ci-cd-final-project:latest
+    name: build-image
+    type: string
+  tasks:
+  - name: cleanup
+    taskRef:
+      kind: Task
+      name: cleanup
+    workspaces:
+    - name: source
+      workspace: output
+  - name: git-clone
+    params:
+    - name: url
+      value: $(params.repo-url)
+    - name: revision
+      value: $(params.revision)
+    runAfter:
+    - cleanup
+    taskRef:
+      kind: ClusterTask
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: output
+  - name: flake8
+    runAfter:
+    - git-clone
+    taskRef:
+      kind: Task
+      name: flake8
+    workspaces:
+    - name: source
+      workspace: output
+  - name: nose
+    runAfter:
+    - flake8
+    taskRef:
+      kind: Task
+      name: nose
+    workspaces:
+    - name: source
+      workspace: output
+  - name: buildah
+    params:
+    - name: IMAGE
+      value: $(params.build-image)
+    - name: DOCKERFILE
+      value: ./Dockerfile
+    - name: CONTEXT
+      value: .
+    runAfter:
+    - nose
+    taskRef:
+      kind: ClusterTask
+      name: buildah
+    workspaces:
+    - name: source
+      workspace: output
+  - name: deploy
+    params:
+    - name: SCRIPT
+      value: |
+        oc create deployment $(params.app-name) --image=$(params.build-image) --dry-run=client -o yaml | oc apply -f -
+    runAfter:
+    - buildah
+    taskRef:
+      kind: ClusterTask
+      name: openshift-client
+  workspaces:
+  - name: output

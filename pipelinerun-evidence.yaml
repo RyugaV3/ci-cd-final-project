@@ -1,0 +1,152 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  annotations:
+    chains.tekton.dev/signed: "true"
+  creationTimestamp: "2026-10-29T17:11:40Z"
+  finalizers:
+  - chains.tekton.dev/pipelinerun
+  generateName: ci-cd-final-project-run-
+  generation: 1
+  labels:
+    tekton.dev/pipeline: ci-cd-final-project
+  name: ci-cd-final-project-run-rjc64
+  namespace: sn-labs-joshchongmah
+  resourceVersion: "3108536050"
+  uid: 804b7e7a-5da5-4c52-a8e2-e6358ec98b97
+spec:
+  params:
+  - name: app-name
+    value: ci-cd-final-project
+  - name: build-image
+    value: image-registry.openshift-image-registry.svc:5000/sn-labs-joshchongmah/ci-cd-final-project:latest
+  - name: repo-url
+    value: https://github.com/RyugaV3/ci-cd-final-project.git
+  - name: revision
+    value: main
+  pipelineRef:
+    name: ci-cd-final-project
+  taskRunTemplate:
+    serviceAccountName: pipeline
+  timeouts:
+    pipeline: 1h0m0s
+  workspaces:
+  - name: output
+    persistentVolumeClaim:
+      claimName: oc-lab-pvc
+status:
+  childReferences:
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: ci-cd-final-project-run-rjc64-cleanup
+    pipelineTaskName: cleanup
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: ci-cd-final-project-run-rjc64-git-clone
+    pipelineTaskName: git-clone
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: ci-cd-final-project-run-rjc64-flake8
+    pipelineTaskName: flake8
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: ci-cd-final-project-run-rjc64-nose
+    pipelineTaskName: nose
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: ci-cd-final-project-run-rjc64-buildah
+    pipelineTaskName: buildah
+  - apiVersion: tekton.dev/v1
+    kind: TaskRun
+    name: ci-cd-final-project-run-rjc64-deploy
+    pipelineTaskName: deploy
+  completionTime: "2026-10-29T17:15:08Z"
+  conditions:
+  - lastTransitionTime: "2026-10-29T17:15:08Z"
+    message: 'Tasks Completed: 6 (Failed: 0, Cancelled 0), Skipped: 0'
+    reason: Succeeded
+    status: "True"
+    type: Succeeded
+  pipelineSpec:
+    params:
+    - default: https://github.com/RyugaV3/ci-cd-final-project.git
+      name: repo-url
+      type: string
+    - default: main
+      name: revision
+      type: string
+    - default: ci-cd-final-project
+      name: app-name
+      type: string
+    - default: image-registry.openshift-image-registry.svc:5000/sn-labs-joshchongmah/ci-cd-final-project:latest
+      name: build-image
+      type: string
+    tasks:
+    - name: cleanup
+      taskRef:
+        kind: Task
+        name: cleanup
+      workspaces:
+      - name: source
+        workspace: output
+    - name: git-clone
+      params:
+      - name: url
+        value: https://github.com/RyugaV3/ci-cd-final-project.git
+      - name: revision
+        value: main
+      runAfter:
+      - cleanup
+      taskRef:
+        kind: ClusterTask
+        name: git-clone
+      workspaces:
+      - name: output
+        workspace: output
+    - name: flake8
+      runAfter:
+      - git-clone
+      taskRef:
+        kind: Task
+        name: flake8
+      workspaces:
+      - name: source
+        workspace: output
+    - name: nose
+      runAfter:
+      - flake8
+      taskRef:
+        kind: Task
+        name: nose
+      workspaces:
+      - name: source
+        workspace: output
+    - name: buildah
+      params:
+      - name: IMAGE
+        value: image-registry.openshift-image-registry.svc:5000/sn-labs-joshchongmah/ci-cd-final-project:latest
+      - name: DOCKERFILE
+        value: ./Dockerfile
+      - name: CONTEXT
+        value: .
+      runAfter:
+      - nose
+      taskRef:
+        kind: ClusterTask
+        name: buildah
+      workspaces:
+      - name: source
+        workspace: output
+    - name: deploy
+      params:
+      - name: SCRIPT
+        value: |
+          oc create deployment ci-cd-final-project --image=image-registry.openshift-image-registry.svc:5000/sn-labs-joshchongmah/ci-cd-final-project:latest --dry-run=client -o yaml | oc apply -f -
+      runAfter:
+      - buildah
+      taskRef:
+        kind: ClusterTask
+        name: openshift-client
+    workspaces:
+    - name: output
+  startTime: "2026-10-29T17:11:40Z"
